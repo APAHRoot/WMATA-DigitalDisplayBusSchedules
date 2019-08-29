@@ -1,0 +1,230 @@
+<!--
+    Licensed under Creative Commons as Attribution-NonCommercial-ShareAlike 4.0 International
+    i.e you can use this in your own display solutions or as reference, but you can't sell it as a standalone or as a paid-to-add feature
+    2019 Nathaniel Root and the Arlington Partnership for Affordable Housing
+    
+    This widget was designed for usage with PiSignage but should be generalizable to other implementations
+    
+    The simple WMATA Metrobus Real Time schedule tracker, for digital signage displays!
+    Name undoubtedly needs work.
+    
+    This widget interfaces with WMATA's API (sign up here and make sure to subscribe on their products page to get a key https://developer.wmata.com/)
+    Specifically their real time bus eta information, and uses it create a digital read out of incoming busses at specified bus stops.
+    The current design is set for 4 bus stops on a 1920x1080 resolution (resolution not hard coded, just the display type that was in mind when built)
+    with a weather widget being displayed on the left hand side (not included and not needed for this page to load properly).
+    You can easily modify this to add additional bus stops being displayed at any one time through the style coding.
+    Bus stop numbers modified in the java script section. You can find bus stop locations here: https://buseta.wmata.com/
+    
+    Have fun with it and hope this is helpful for someone out there!
+    
+    Shout out to https://www.taniarascia.com/how-to-connect-to-an-api-with-javascript/
+    
+    Last update: 2019-August-29
+    
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link href="https://fonts.googleapis.com/css?family=Lato:100,300" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css?family=Exo+2|Noto+Sans|Titillium+Web:700&display=swap" rel="stylesheet"> 
+    <title>Metro Bus Live Schedule</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+
+    <style>
+        :root{
+            --main-ft-color: white;
+            /*--main-ft-color: rgb(41, 44, 48);*/
+            --main-bkg-color: rgb(30, 38, 50);
+        }
+        
+        html, body {
+            font-size: 32px; /* Change this to change the sizes of all texts*/
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            color: var(--main-ft-color);
+            font-family: "Lato", sans-serif;
+            /*background-color: black;*/
+            background: var(--main-bkg-color);
+            text-align: left;
+            
+        }
+        .container {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            display: inline-block;
+            text-align: left;
+        }
+        .title {
+            font-family: 'Noto Sans', sans-serif;
+            margin: 0 0 0 2em; 
+        }
+        .schedule-container {
+            display: flex;
+            vertical-align: top;
+            flex-wrap: wrap;
+        }
+        .stopschedule {
+            width: auto;
+            flex: 1 0 40%;
+            vertical-align: top;
+            margin-top: 1em;
+            margin-left: 3em;
+            margin-bottom:1em;
+            text-align: left;
+            display: inline-block;
+        }
+        .directionTrav {
+            font-size: 14px;
+        }
+        h1 {
+            /*Header for top of page*/
+            margin: 5px 0px 15px 40px;
+        }
+        h3 {
+            /*Header for bus stop number*/
+            font-family: 'Titillium Web', sans-serif;
+            margin: 0px 0px 20px 0px;
+            font-weight: 700;
+        }
+        h4 {
+            /*Header for Cross Street/ bus stop name*/
+            font-size: 28px;
+            font-weight: 300;
+            margin: 0px 0px 0px 0px;
+        }
+        h5 {
+            /*header for direction and the text BUS STOP #*/
+            font-size: 12px;
+            margin: 0px 0px 0px 0px;
+        }
+        td {
+            padding: 0px 0px 0px 10px;
+            font-size: 22px;
+        }
+        .filler {
+            padding-bottom: 20px;
+        }
+        .header {
+            padding-left: 4px;
+            border-left: 6px solid;
+            border-color: var(--main-ft-color);
+            border-radius: 6px;
+        }
+        
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="title"><h1>METRO BUS SCHEDULE</h1></div>
+    <div id="schedule-container" class = "schedule-container">
+        
+        
+    </div>
+
+</div>
+
+
+
+<script type="text/javascript">
+    var stops = [6000227,6001239,6000236,6000233];//change your bus stop locations here (you can find that information by clicking on stops on this map https://buseta.wmata.com/)
+    acquireBusStopInfo(stops);
+    function acquireBusStopInfo(stops) {
+        for (i = 0; i <stops.length; i++){
+            
+            var theParams = {
+                "api_key": "XXXXXXXXXXXXXXXXXXXXXX", //change your API key information here (you need to sign up and subscribe on https://developer.wmata.com/)
+                // Request parameters
+                "StopID": stops[i],
+            };
+            makeRequest(theParams, i, stops[i]);
+            
+        }
+    }
+    function makeRequest(params, index, stopNum){
+        //function creates html elements, makes the data request to the API, and adds relevant data to the html elements
+        //params = the parameters for the html request, the api key, and the stop id
+        //index is the index of the for loop that calls this function, used to create unique identifiers for each html element created
+        //stopNum is the current stop number that data is being requested for
+        //currently the program is designed to have only 4 stops displayed at a time, you can modify this in the style code.
+        
+        var request = new XMLHttpRequest();
+        //Create a new schedule block for the stop
+        var schedule = document.createElement('div');
+        schedule.setAttribute('class', 'stopschedule');
+        schedule.setAttribute('id', index);
+        document.getElementById("schedule-container").appendChild(schedule);
+        var stop = document.getElementById(index);
+        
+        //Wrap header components in a header div block
+        var header = document.createElement('div');
+        header.setAttribute('id', "header"+index);
+        header.setAttribute('class',"header");
+        stop.appendChild(header);
+        var headerDiv = document.getElementById("header"+index);
+        
+        //Create a header indicating stop direction
+        var bound = document.createElement('h5');
+        bound.setAttribute('id',"bound"+index);
+        headerDiv.appendChild(bound);
+        
+        //Create a header indicating the stop name (cross streets)
+        var stopName = document.createElement('h4');
+        stopName.setAttribute('id', "stopName"+index);
+        headerDiv.appendChild(stopName);
+        
+        //Create a header indicating the stop number
+        headerDiv.innerHTML += "<h5>BUS STOP #</h5>";
+        var stopID = document.createElement('h3');
+        stopID.setAttribute('id', stopNum);
+        headerDiv.appendChild(stopID);
+        document.getElementById(stopNum).innerHTML = stopNum;
+        
+        //Create a schedule table
+        var table = document.createElement('table');
+        table.setAttribute('class', "scheduleTable");
+        table.setAttribute('id',"table"+index);
+        stop.appendChild(table);
+        var currentTable = document.getElementById("table"+index);
+        
+        //send get request and run a function
+        request.open("GET", "https://api.wmata.com/NextBusService.svc/json/jPredictions?" + $.param(params),true);
+        request.onload = function() {
+            var data = JSON.parse(this.response);
+            document.getElementById("bound"+index).innerHTML = checkDirection(data.Predictions[0].DirectionText[0]);
+            document.getElementById("stopName"+index).innerHTML = data.StopName;
+            if (request.status >= 200 && request.status <400){
+                for (j = 0; j<data.Predictions.length;j++) {
+                    if (parseInt(data.Predictions[j].Minutes) >1){
+                        currentTable.innerHTML+=("<tr><td class = directionTrav colspan =4>" + data.Predictions[j].DirectionText +"</td></tr>");
+                        currentTable.innerHTML+=("<td>" + data.Predictions[j].RouteID + "</td><td> in </td>" + "<td>"+data.Predictions[j].Minutes + "</td><td> Minutes</td><tr><td class=filler> </td></tr>");
+                    }
+                }
+            } else {
+                document.getElementById("ScheduledBusses").innerHTML = "Something is wrong, either the request parameters were incorrect, or WMATA is currently not accessible.";
+            }
+        };
+        request.send();
+    }
+    function checkDirection(directionLetter){
+        //takes the first letter of a direction and returns the direction
+        var direc = "";
+        if (directionLetter.toLowerCase() == "w"){
+            direc = "WEST";
+        } else if (directionLetter.toLowerCase() == "e"){
+            direc = "EAST";
+        } else if (directionLetter.toLowerCase() == "n"){
+            direc = "NORTH";
+        } else if (directionLetter.toLowerCase() == "s"){
+            direc = "SOUTH";
+        } else {
+            direc = "";
+        }
+        return direc;
+    }
+</script>
+</body>
+</html>
